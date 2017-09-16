@@ -1,6 +1,7 @@
+use std::fmt;
+
 use emulator::{Address, Constant, Register};
 
-#[derive(Debug)]
 pub enum Opcode {
     Call(Address),
     Clear,
@@ -98,6 +99,118 @@ impl Opcode {
                 _ => None
             }
             _ => None
+        }
+    }
+}
+
+impl fmt::Debug for Opcode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Opcode::Call(address) => {
+                write!(f, "CALL\t{:x}", address)
+            }
+            Opcode::Clear => {
+                write!(f, "CLEAR")
+            }
+            Opcode::Return => {
+                write!(f, "RETURN")
+            }
+            Opcode::Goto(address) => {
+                write!(f, "GOTO\t{:x}", address)
+            }
+            Opcode::CallFunction(address) => {
+                write!(f, "CALLFUN\t{:x}", address)
+            }
+            Opcode::SkipEq(register, constant) => {
+                write!(f, "SKIP_EQ\t{:x}\t{}", register, constant)
+            }
+            Opcode::SkipNEq(register, constant) => {
+                write!(f, "SKIP_NEQ\t{:x}\t{}", register, constant)
+            }
+            Opcode::SkipEqReg(first, second) => {
+                write!(f, "SKIP_EQ\t{:x}\t{:x}", first, second)
+            }
+            Opcode::Set(register, constant) => {
+                write!(f, "SET\t{:x}\t{}", register, constant)
+            }
+            Opcode::AddAssign(register, constant) => {
+                write!(f, "ADD_ASSIGN\t{:x}\t{}", register, constant)
+            }
+            Opcode::Copy(to, from) => {
+                write!(f, "COPY\t{:x}\t{:x}", to, from)
+            }
+            Opcode::Or(first, second) => {
+                write!(f, "OR\t{:x}\t{:x}", first, second)
+            }
+            Opcode::And(first, second) => {
+                write!(f, "AND\t{:x}\t{:x}", first, second)
+            }
+            Opcode::Xor(first, second) => {
+                write!(f, "XOR\t{:x}\t{:x}", first, second)
+            }
+            Opcode::AddAssignReg(first, second) => {
+                write!(f, "ADD_ASSIGN\t{:x}\t{:x}", first, second)
+            }
+            Opcode::SubAssignReg(first, second) => {
+                write!(f, "SUB_ASSIGN\t{:x}\t{:x}", first, second)
+            }
+            Opcode::ShiftRight(first, second) => {
+                write!(f, "RSH\t{:x}\t{:x}", first, second)
+            }
+            Opcode::Subtract(first, second) => {
+                write!(f, "SUB\t{:x}\t{:x}", first, second)
+            }
+            Opcode::ShiftLeft(first, second) => {
+                write!(f, "LSH\t{:x}\t{:x}", first, second)
+            }
+            Opcode::SkipNEqReg(first, second) => {
+                write!(f, "SKIP_NEQ\t{:x}\t{:x}", first, second)
+            }
+            Opcode::SetAddressReg(address) => {
+                write!(f, "SET\tI\t{:x}", address)
+            }
+            Opcode::JumpOffset(constant) => {
+                write!(f, "OFFSET\t{}", constant)
+            }
+            Opcode::SetRand(register, constant) => {
+                write!(f, "RAND\t{:x}\t{}", register, constant)
+            }
+            Opcode::Draw(first, second, constant) => {
+                write!(f, "DRAW\t{:x}\t{:x}\t{}", first, second, constant)
+            }
+            Opcode::SkipKeyPress(register) => {
+                write!(f, "SKIP_KP\t{:x}", register)
+            }
+            Opcode::SkipNoKeyPress(register) => {
+                write!(f, "SKIP_NKP\t{:x}", register)
+            }
+            Opcode::StoreDelayTimer(register) => {
+                write!(f, "SET\t{:x}\tDELAY", register)
+            }
+            Opcode::StoreKeypress(register) => {
+                write!(f, "SET\t{:x}\tKP", register)
+            }
+            Opcode::SetDelayTimer(register) => {
+                write!(f, "SET\tDELAY\t{:x}", register)
+            }
+            Opcode::SetSoundTimer(register) => {
+                write!(f, "SET\tSOUND\t{:x}", register)
+            }
+            Opcode::IncrementAddressReg(register) => {
+                write!(f, "ADD\tI\t{:x}", register)
+            }
+            Opcode::StoreSpriteAddress(register) => {
+                write!(f, "SET_SPRITE\t{:x}", register)
+            }
+            Opcode::BinaryCodedDecimal(register) => {
+                write!(f, "BCD\t{:x}", register)
+            }
+            Opcode::Dump(register) => {
+                write!(f, "DUMP\t{:x}", register)
+            }
+            Opcode::Load(register) => {
+                write!(f, "LOAD\t{:x}", register)
+            }
         }
     }
 }
