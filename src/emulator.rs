@@ -7,6 +7,8 @@ pub type Address = u16;
 pub type Constant = u8;
 pub type Register = u8;
 
+const WORD_SIZE: u16 = 2;
+
 pub struct System {
     memory: [Constant; 4096],
     registers: [Constant; 16],
@@ -47,8 +49,8 @@ impl System {
     }
 
     pub fn run(&mut self) {
-        println!("PC\tOP\tARG1\tARG2\tARG3");
-        println!("--\t--\t----\t----\t----");
+        println!("PC\tDELAY\tSOUND\tOP\tARG1\tARG2\tARG3");
+        println!("--\t-----\t-----\t--\t----\t----\t----");
         loop {
             let first_address = self.program_counter as usize;
             let second_address = (self.program_counter + 1) as usize;
@@ -56,13 +58,13 @@ impl System {
             let first_byte = self.memory[first_address];
             let second_byte = self.memory[second_address];
 
-            print!("{:x}\t", self.program_counter);
+            print!("{:x}\t{}\t{}\t", self.program_counter, self.delay_timer, self.sound_timer);
             if let Some(opcode) = Opcode::from(first_byte, second_byte) {
                 println!("{:?}", opcode);
                 self.process_opcode(opcode);
             } else {
                 println!("LBL\t{:x}{:x}", first_byte, second_byte);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
 
             self.tick(60);
@@ -72,17 +74,17 @@ impl System {
     fn process_opcode(&mut self, opcode: Opcode) {
         match opcode {
             Opcode::Call(address) => {
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Clear => {
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Return => {
                 if let Some(address) = self.stack.pop_front() {
                     self.program_counter = address;
                 } else {
                     println!("NOWHERE TO RETURN");
-                    self.program_counter += 2;
+                    self.program_counter += WORD_SIZE;
                 }
             }
             Opcode::Goto(address) => {
@@ -94,56 +96,56 @@ impl System {
             }
             Opcode::SkipEq(register, constant) => {
                 if self.get_register(register) == constant {
-                    self.program_counter += 4;
+                    self.program_counter += 2 * WORD_SIZE;
                 } else {
-                    self.program_counter += 2;
+                    self.program_counter += WORD_SIZE;
                 }
             }
             Opcode::SkipNEq(register, constant) => {
                 if self.get_register(register) != constant {
-                    self.program_counter += 4;
+                    self.program_counter += 2 * WORD_SIZE;
                 } else {
-                    self.program_counter += 2;
+                    self.program_counter += WORD_SIZE;
                 }
             }
             Opcode::SkipEqReg(first, second) => {
                 if self.get_register(first) == self.get_register(second) {
-                    self.program_counter += 4;
+                    self.program_counter += 2 * WORD_SIZE;
                 } else {
-                    self.program_counter += 2;
+                    self.program_counter += WORD_SIZE;
                 }
             }
             Opcode::Set(register, constant) => {
                 self.set_register(register, constant);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::AddAssign(register, constant) => {
                 let value = self.get_register(register);
                 self.set_register(register, register.wrapping_add(constant));
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Copy(to, from) => {
                 let from_value = self.get_register(from);
                 self.set_register(to, from_value);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Or(first, second) => {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
                 self.set_register(first, first_value | second_value);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::And(first, second) => {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
                 self.set_register(first, first_value & second_value);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Xor(first, second) => {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
                 self.set_register(first, first_value ^ second_value);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::AddAssignReg(first, second) => {
                 let first_value = self.get_register(first);
@@ -153,7 +155,7 @@ impl System {
                 self.set_register(first, result);
                 self.set_flag_register(if carry { 1 } else { 0 });
 
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::SubAssignReg(first, second) => {
                 let first_value = self.get_register(first);
@@ -163,7 +165,7 @@ impl System {
                 self.set_register(first, result);
                 self.set_flag_register(if carry { 1 } else { 0 });
 
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::ShiftRight(first, second) => {
                 let original_value = self.get_register(second);
@@ -175,7 +177,7 @@ impl System {
                 self.set_register(second, value);
                 self.set_flag_register(lowest_bit);
 
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Subtract(first, second) => {
                 let first_value = self.get_register(first);
@@ -185,7 +187,7 @@ impl System {
                 self.set_register(first, result);
                 self.set_flag_register(if carry { 1 } else { 0 });
 
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::ShiftLeft(first, second) => {
                 let original_value = self.get_register(second);
@@ -197,55 +199,55 @@ impl System {
                 self.set_register(second, value);
                 self.set_flag_register(highest_bit);
 
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::SkipNEqReg(first, second) => {
                 if self.get_register(first) != self.get_register(second) {
-                    self.program_counter += 4;
+                    self.program_counter += 2 * WORD_SIZE;
                 } else {
-                    self.program_counter += 2;
+                    self.program_counter += WORD_SIZE;
                 }
             }
             Opcode::SetAddressReg(address) => {
                 self.address_register = address;
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::JumpOffset(constant) => {
                 self.program_counter = self.get_register(0x0) as u16 + self.address_register;
             }
             Opcode::SetRand(register, constant) => {
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Draw(first, second, constant) => {
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::SkipKeyPress(register) => {}
             Opcode::SkipNoKeyPress(register) => {}
             Opcode::StoreDelayTimer(register) => {
                 let delay = self.delay_timer;
                 self.set_register(register, delay);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::StoreKeypress(register) => {
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::SetDelayTimer(register) => {
                 self.delay_timer = self.get_register(register);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::SetSoundTimer(register) => {
                 self.sound_timer = self.get_register(register);
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::IncrementAddressReg(register) => {
                 self.address_register += self.get_register(register) as u16;
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::StoreSpriteAddress(register) => {
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::BinaryCodedDecimal(register) => {
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Dump(register) => {
                 for i in 0..(register + 1) {
@@ -255,7 +257,7 @@ impl System {
                     self.set_register(to_register, value);
                     self.address_register += 1;
                 }
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
             Opcode::Load(register) => {
                 for i in 0..(register + 1) {
@@ -265,7 +267,7 @@ impl System {
                     self.set_register(i, value);
                     self.address_register += 1;
                 }
-                self.program_counter += 2;
+                self.program_counter += WORD_SIZE;
             }
         }
     }
