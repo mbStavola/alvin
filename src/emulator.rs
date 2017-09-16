@@ -54,8 +54,8 @@ impl System {
                 println!("{:x}\t{:?}", self.program_counter, opcode);
                 self.process_opcode(opcode);
             } else {
-                println!("Unrecognized opcode");
-                break;
+                println!("Unrecognized opcode, could be a label?");
+                self.program_counter += 2;
             }
 
             self.tick(60);
