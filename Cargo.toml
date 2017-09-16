@@ -3,6 +3,11 @@ name = "alvin"
 version = "0.1.0"
 description = "A simple CHIP-8 emulator."
 authors = ["Matt Stavola"]
+repository = "https://github.com/mbStavola/alvin"
+readme = "README.md"
+
+keywords = ["CHIP-8", "emulator"]
+categories = ["emulators", "games"]
 
 [dependencies]
 clap = "^2.26.1"
