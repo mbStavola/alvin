@@ -112,34 +112,34 @@ impl fmt::Debug for Opcode {
                 write!(f, "CALL\t{:#04x}", address)
             }
             Opcode::Clear => {
-                write!(f, "CLEAR")
+                write!(f, "CLS")
             }
             Opcode::Return => {
-                write!(f, "RETURN")
+                write!(f, "RET")
             }
             Opcode::Goto(address) => {
-                write!(f, "GOTO\t{:#04x}", address)
+                write!(f, "JMP\t{:#04x}", address)
             }
             Opcode::CallFunction(address) => {
-                write!(f, "CALLFUN\t{:#04x}", address)
+                write!(f, "CALL\t{:#04x}", address)
             }
             Opcode::SkipEq(register, constant) => {
-                write!(f, "SKIP_EQ\t{:#03x}\t{}", register, constant)
+                write!(f, "SE\t{:#03x}\t{}", register, constant)
             }
             Opcode::SkipNEq(register, constant) => {
-                write!(f, "SKIP_NEQ\t{:#03x}\t{}", register, constant)
+                write!(f, "SNE\t{:#03x}\t{}", register, constant)
             }
             Opcode::SkipEqReg(first, second) => {
-                write!(f, "SKIP_EQ\t{:#03x}\t{:#03x}", first, second)
+                write!(f, "SE\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::Set(register, constant) => {
                 write!(f, "SET\t{:#03x}\t{}", register, constant)
             }
             Opcode::AddAssign(register, constant) => {
-                write!(f, "ADD_ASSIGN\t{:#03x}\t{}", register, constant)
+                write!(f, "ADDA\t{:#03x}\t{}", register, constant)
             }
             Opcode::Copy(to, from) => {
-                write!(f, "COPY\t{:#03x}\t{:#03x}", to, from)
+                write!(f, "SET\t{:#03x}\t{:#03x}", to, from)
             }
             Opcode::Or(first, second) => {
                 write!(f, "OR\t{:#03x}\t{:#03x}", first, second)
@@ -151,46 +151,46 @@ impl fmt::Debug for Opcode {
                 write!(f, "XOR\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::AddAssignReg(first, second) => {
-                write!(f, "ADD_ASSIGN\t{:#03x}\t{:#03x}", first, second)
+                write!(f, "ADDA\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::SubAssignReg(first, second) => {
-                write!(f, "SUB_ASSIGN\t{:#03x}\t{:#03x}", first, second)
+                write!(f, "SUBA\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::ShiftRight(first, second) => {
-                write!(f, "RSH\t{:#03x}\t{:#03x}", first, second)
+                write!(f, "SHR\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::Subtract(first, second) => {
                 write!(f, "SUB\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::ShiftLeft(first, second) => {
-                write!(f, "LSH\t{:#03x}\t{:#03x}", first, second)
+                write!(f, "SHL\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::SkipNEqReg(first, second) => {
-                write!(f, "SKIP_NEQ\t{:#03x}\t{:#03x}", first, second)
+                write!(f, "SNE\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::SetAddressReg(address) => {
                 write!(f, "SET\tI\t{:#04x}", address)
             }
             Opcode::JumpOffset(constant) => {
-                write!(f, "OFFSET\t{}", constant)
+                write!(f, "OFF\t{}", constant)
             }
             Opcode::SetRand(register, constant) => {
-                write!(f, "RAND\t{:#03x}\t{}", register, constant)
+                write!(f, "RND\t{:#03x}\t{}", register, constant)
             }
             Opcode::Draw(first, second, constant) => {
-                write!(f, "DRAW\t{:#03x}\t{:#03x}\t{}", first, second, constant)
+                write!(f, "DRW\t{:#03x}\t{:#03x}\t{}", first, second, constant)
             }
             Opcode::SkipKeyPress(register) => {
-                write!(f, "SKIP_KP\t{:#03x}", register)
+                write!(f, "SKP\t{:#03x}", register)
             }
             Opcode::SkipNoKeyPress(register) => {
-                write!(f, "SKIP_NKP\t{:#03x}", register)
+                write!(f, "SNKP\t{:#03x}", register)
             }
             Opcode::StoreDelayTimer(register) => {
                 write!(f, "SET\t{:#03x}\tDELAY", register)
             }
             Opcode::StoreKeypress(register) => {
-                write!(f, "SET\t{:#03x}\tKP", register)
+                write!(f, "SET\t{:#03x}\tKEY", register)
             }
             Opcode::SetDelayTimer(register) => {
                 write!(f, "SET\tDELAY\t{:#03x}", register)
@@ -202,7 +202,7 @@ impl fmt::Debug for Opcode {
                 write!(f, "ADD\tI\t{:#03x}", register)
             }
             Opcode::StoreSpriteAddress(register) => {
-                write!(f, "SET_SPRITE\t{:#03x}", register)
+                write!(f, "SPRT\t{:#03x}", register)
             }
             Opcode::BinaryCodedDecimal(register) => {
                 write!(f, "BCD\t{:#03x}", register)
