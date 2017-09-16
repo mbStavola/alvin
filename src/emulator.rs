@@ -50,26 +50,23 @@ impl System {
         println!("PC\tOP\tARG1\tARG2\tARG3");
         println!("--\t--\t----\t----\t----");
         loop {
-            if let Some(opcode) = self.get_current_opcode() {
-                println!("{:x}\t{:?}", self.program_counter, opcode);
+            let first_address = self.program_counter as usize;
+            let second_address = (self.program_counter + 1) as usize;
+
+            let first_byte = self.memory[first_address];
+            let second_byte = self.memory[second_address];
+
+            print!("{:x}\t", self.program_counter);
+            if let Some(opcode) = Opcode::from(first_byte, second_byte) {
+                println!("{:?}", opcode);
                 self.process_opcode(opcode);
             } else {
-                println!("Unrecognized opcode, could be a label?");
+                println!("LBL\t{:x}{:x}", first_byte, second_byte);
                 self.program_counter += 2;
             }
 
             self.tick(60);
         }
-    }
-
-    fn get_current_opcode(&mut self) -> Option<Opcode> {
-        let first_address = self.program_counter as usize;
-        let second_address = (self.program_counter + 1) as usize;
-
-        let first_byte = self.memory[first_address];
-        let second_byte = self.memory[second_address];
-
-        Opcode::from(first_byte, second_byte)
     }
 
     fn process_opcode(&mut self, opcode: Opcode) {
