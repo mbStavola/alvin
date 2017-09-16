@@ -58,13 +58,16 @@ impl System {
             let first_byte = self.memory[first_address];
             let second_byte = self.memory[second_address];
 
-            print!("{:x}\t{}\t{}\t", self.program_counter, self.delay_timer, self.sound_timer);
-            if let Some(opcode) = Opcode::from(first_byte, second_byte) {
-                println!("{:?}", opcode);
-                self.process_opcode(opcode);
-            } else {
-                println!("LBL\t{:x}{:x}", first_byte, second_byte);
-                self.program_counter += WORD_SIZE;
+            print!("{:#04x}\t{}\t{}\t", self.program_counter, self.delay_timer, self.sound_timer);
+            match Opcode::from(first_byte, second_byte) {
+                Ok(opcode) => {
+                    println!("{:?}", opcode);
+                    self.process_opcode(opcode);
+                },
+                Err((first, second)) => {
+                    println!("DATA\t{:x}{:x}", first.0, second.0);
+                    self.program_counter += WORD_SIZE;
+                }
             }
 
             self.tick(60);

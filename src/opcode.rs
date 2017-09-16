@@ -40,8 +40,10 @@ pub enum Opcode {
     Load(Register),
 }
 
+pub struct Data(pub Address);
+
 impl Opcode {
-    pub fn from(first_byte: u8, second_byte: u8) -> Option<Opcode> {
+    pub fn from(first_byte: u8, second_byte: u8) -> Result<Opcode, (Data, Data)> {
         let nibbles = [
             (first_byte & 0xF0) >> 0x4,
             first_byte & 0xF,
@@ -53,52 +55,52 @@ impl Opcode {
 
         match nibbles[0] {
             0x0 => match (nibbles[2], nibbles[3]) {
-                (0xE, 0x0) => Some(Opcode::Clear),
-                (0xE, 0xE) => Some(Opcode::Return),
-                _ => Some(Opcode::Call(build_address(nibbles)))
+                (0xE, 0x0) => Ok(Opcode::Clear),
+                (0xE, 0xE) => Ok(Opcode::Return),
+                _ => Ok(Opcode::Call(build_address(nibbles)))
             },
-            0x1 => Some(Opcode::Goto(build_address(nibbles))),
-            0x2 => Some(Opcode::CallFunction(build_address(nibbles))),
-            0x3 => Some(Opcode::SkipEq(nibbles[1], build_constant(nibbles))),
-            0x4 => Some(Opcode::SkipNEq(nibbles[1], build_constant(nibbles))),
-            0x5 => Some(Opcode::SkipEqReg(nibbles[1], nibbles[2])),
-            0x6 => Some(Opcode::Set(nibbles[1], build_constant(nibbles))),
-            0x7 => Some(Opcode::AddAssign(nibbles[1], build_constant(nibbles))),
+            0x1 => Ok(Opcode::Goto(build_address(nibbles))),
+            0x2 => Ok(Opcode::CallFunction(build_address(nibbles))),
+            0x3 => Ok(Opcode::SkipEq(nibbles[1], build_constant(nibbles))),
+            0x4 => Ok(Opcode::SkipNEq(nibbles[1], build_constant(nibbles))),
+            0x5 => Ok(Opcode::SkipEqReg(nibbles[1], nibbles[2])),
+            0x6 => Ok(Opcode::Set(nibbles[1], build_constant(nibbles))),
+            0x7 => Ok(Opcode::AddAssign(nibbles[1], build_constant(nibbles))),
             0x8 => match nibbles[3] {
-                0x0 => Some(Opcode::Copy(nibbles[1], nibbles[2])),
-                0x1 => Some(Opcode::Or(nibbles[1], nibbles[2])),
-                0x2 => Some(Opcode::And(nibbles[1], nibbles[2])),
-                0x3 => Some(Opcode::Xor(nibbles[1], nibbles[2])),
-                0x4 => Some(Opcode::AddAssignReg(nibbles[1], nibbles[2])),
-                0x5 => Some(Opcode::SubAssignReg(nibbles[1], nibbles[2])),
-                0x6 => Some(Opcode::ShiftRight(nibbles[1], nibbles[2])),
-                0x7 => Some(Opcode::Subtract(nibbles[1], nibbles[2])),
-                0xE => Some(Opcode::ShiftLeft(nibbles[1], nibbles[2])),
-                _ => None
+                0x0 => Ok(Opcode::Copy(nibbles[1], nibbles[2])),
+                0x1 => Ok(Opcode::Or(nibbles[1], nibbles[2])),
+                0x2 => Ok(Opcode::And(nibbles[1], nibbles[2])),
+                0x3 => Ok(Opcode::Xor(nibbles[1], nibbles[2])),
+                0x4 => Ok(Opcode::AddAssignReg(nibbles[1], nibbles[2])),
+                0x5 => Ok(Opcode::SubAssignReg(nibbles[1], nibbles[2])),
+                0x6 => Ok(Opcode::ShiftRight(nibbles[1], nibbles[2])),
+                0x7 => Ok(Opcode::Subtract(nibbles[1], nibbles[2])),
+                0xE => Ok(Opcode::ShiftLeft(nibbles[1], nibbles[2])),
+                _ => Err(build_data(nibbles))
             },
-            0x9 => Some(Opcode::SkipNEqReg(nibbles[1], nibbles[2])),
-            0xA => Some(Opcode::SetAddressReg(build_address(nibbles))),
-            0xB => Some(Opcode::JumpOffset(build_constant(nibbles))),
-            0xC => Some(Opcode::SetRand(nibbles[1], build_constant(nibbles))),
-            0xD => Some(Opcode::Draw(nibbles[1], nibbles[2], nibbles[3])),
+            0x9 => Ok(Opcode::SkipNEqReg(nibbles[1], nibbles[2])),
+            0xA => Ok(Opcode::SetAddressReg(build_address(nibbles))),
+            0xB => Ok(Opcode::JumpOffset(build_constant(nibbles))),
+            0xC => Ok(Opcode::SetRand(nibbles[1], build_constant(nibbles))),
+            0xD => Ok(Opcode::Draw(nibbles[1], nibbles[2], nibbles[3])),
             0xE => match (nibbles[2], nibbles[3]) {
-                (0x9, 0xE) => Some(Opcode::SkipKeyPress(nibbles[1])),
-                (0xA, 0x1) => Some(Opcode::SkipNoKeyPress(nibbles[1])),
-                _ => None
+                (0x9, 0xE) => Ok(Opcode::SkipKeyPress(nibbles[1])),
+                (0xA, 0x1) => Ok(Opcode::SkipNoKeyPress(nibbles[1])),
+                _ => Err(build_data(nibbles))
             },
             0xF => match (nibbles[2], nibbles[3]) {
-                (0x0, 0x7) => Some(Opcode::StoreDelayTimer(nibbles[1])),
-                (0x0, 0xA) => Some(Opcode::StoreKeypress(nibbles[1])),
-                (0x1, 0x5) => Some(Opcode::SetDelayTimer(nibbles[1])),
-                (0x1, 0x8) => Some(Opcode::SetSoundTimer(nibbles[1])),
-                (0x1, 0xE) => Some(Opcode::IncrementAddressReg(nibbles[1])),
-                (0x2, 0x9) => Some(Opcode::StoreSpriteAddress(nibbles[1])),
-                (0x3, 0x3) => Some(Opcode::BinaryCodedDecimal(nibbles[1])),
-                (0x5, 0x5) => Some(Opcode::Dump(nibbles[1])),
-                (0x6, 0x5) => Some(Opcode::Load(nibbles[1])),
-                _ => None
+                (0x0, 0x7) => Ok(Opcode::StoreDelayTimer(nibbles[1])),
+                (0x0, 0xA) => Ok(Opcode::StoreKeypress(nibbles[1])),
+                (0x1, 0x5) => Ok(Opcode::SetDelayTimer(nibbles[1])),
+                (0x1, 0x8) => Ok(Opcode::SetSoundTimer(nibbles[1])),
+                (0x1, 0xE) => Ok(Opcode::IncrementAddressReg(nibbles[1])),
+                (0x2, 0x9) => Ok(Opcode::StoreSpriteAddress(nibbles[1])),
+                (0x3, 0x3) => Ok(Opcode::BinaryCodedDecimal(nibbles[1])),
+                (0x5, 0x5) => Ok(Opcode::Dump(nibbles[1])),
+                (0x6, 0x5) => Ok(Opcode::Load(nibbles[1])),
+                _ => Err(build_data(nibbles))
             }
-            _ => None
+            _ => Err(build_data(nibbles))
         }
     }
 }
@@ -107,7 +109,7 @@ impl fmt::Debug for Opcode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Opcode::Call(address) => {
-                write!(f, "CALL\t{:x}", address)
+                write!(f, "CALL\t{:#04x}", address)
             }
             Opcode::Clear => {
                 write!(f, "CLEAR")
@@ -116,103 +118,116 @@ impl fmt::Debug for Opcode {
                 write!(f, "RETURN")
             }
             Opcode::Goto(address) => {
-                write!(f, "GOTO\t{:x}", address)
+                write!(f, "GOTO\t{:#04x}", address)
             }
             Opcode::CallFunction(address) => {
-                write!(f, "CALLFUN\t{:x}", address)
+                write!(f, "CALLFUN\t{:#04x}", address)
             }
             Opcode::SkipEq(register, constant) => {
-                write!(f, "SKIP_EQ\t{:x}\t{}", register, constant)
+                write!(f, "SKIP_EQ\t{:#03x}\t{}", register, constant)
             }
             Opcode::SkipNEq(register, constant) => {
-                write!(f, "SKIP_NEQ\t{:x}\t{}", register, constant)
+                write!(f, "SKIP_NEQ\t{:#03x}\t{}", register, constant)
             }
             Opcode::SkipEqReg(first, second) => {
-                write!(f, "SKIP_EQ\t{:x}\t{:x}", first, second)
+                write!(f, "SKIP_EQ\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::Set(register, constant) => {
-                write!(f, "SET\t{:x}\t{}", register, constant)
+                write!(f, "SET\t{:#03x}\t{}", register, constant)
             }
             Opcode::AddAssign(register, constant) => {
-                write!(f, "ADD_ASSIGN\t{:x}\t{}", register, constant)
+                write!(f, "ADD_ASSIGN\t{:#03x}\t{}", register, constant)
             }
             Opcode::Copy(to, from) => {
-                write!(f, "COPY\t{:x}\t{:x}", to, from)
+                write!(f, "COPY\t{:#03x}\t{:#03x}", to, from)
             }
             Opcode::Or(first, second) => {
-                write!(f, "OR\t{:x}\t{:x}", first, second)
+                write!(f, "OR\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::And(first, second) => {
-                write!(f, "AND\t{:x}\t{:x}", first, second)
+                write!(f, "AND\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::Xor(first, second) => {
-                write!(f, "XOR\t{:x}\t{:x}", first, second)
+                write!(f, "XOR\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::AddAssignReg(first, second) => {
-                write!(f, "ADD_ASSIGN\t{:x}\t{:x}", first, second)
+                write!(f, "ADD_ASSIGN\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::SubAssignReg(first, second) => {
-                write!(f, "SUB_ASSIGN\t{:x}\t{:x}", first, second)
+                write!(f, "SUB_ASSIGN\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::ShiftRight(first, second) => {
-                write!(f, "RSH\t{:x}\t{:x}", first, second)
+                write!(f, "RSH\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::Subtract(first, second) => {
-                write!(f, "SUB\t{:x}\t{:x}", first, second)
+                write!(f, "SUB\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::ShiftLeft(first, second) => {
-                write!(f, "LSH\t{:x}\t{:x}", first, second)
+                write!(f, "LSH\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::SkipNEqReg(first, second) => {
-                write!(f, "SKIP_NEQ\t{:x}\t{:x}", first, second)
+                write!(f, "SKIP_NEQ\t{:#03x}\t{:#03x}", first, second)
             }
             Opcode::SetAddressReg(address) => {
-                write!(f, "SET\tI\t{:x}", address)
+                write!(f, "SET\tI\t{:#04x}", address)
             }
             Opcode::JumpOffset(constant) => {
                 write!(f, "OFFSET\t{}", constant)
             }
             Opcode::SetRand(register, constant) => {
-                write!(f, "RAND\t{:x}\t{}", register, constant)
+                write!(f, "RAND\t{:#03x}\t{}", register, constant)
             }
             Opcode::Draw(first, second, constant) => {
-                write!(f, "DRAW\t{:x}\t{:x}\t{}", first, second, constant)
+                write!(f, "DRAW\t{:#03x}\t{:#03x}\t{}", first, second, constant)
             }
             Opcode::SkipKeyPress(register) => {
-                write!(f, "SKIP_KP\t{:x}", register)
+                write!(f, "SKIP_KP\t{:#03x}", register)
             }
             Opcode::SkipNoKeyPress(register) => {
-                write!(f, "SKIP_NKP\t{:x}", register)
+                write!(f, "SKIP_NKP\t{:#03x}", register)
             }
             Opcode::StoreDelayTimer(register) => {
-                write!(f, "SET\t{:x}\tDELAY", register)
+                write!(f, "SET\t{:#03x}\tDELAY", register)
             }
             Opcode::StoreKeypress(register) => {
-                write!(f, "SET\t{:x}\tKP", register)
+                write!(f, "SET\t{:#03x}\tKP", register)
             }
             Opcode::SetDelayTimer(register) => {
-                write!(f, "SET\tDELAY\t{:x}", register)
+                write!(f, "SET\tDELAY\t{:#03x}", register)
             }
             Opcode::SetSoundTimer(register) => {
-                write!(f, "SET\tSOUND\t{:x}", register)
+                write!(f, "SET\tSOUND\t{:#03x}", register)
             }
             Opcode::IncrementAddressReg(register) => {
-                write!(f, "ADD\tI\t{:x}", register)
+                write!(f, "ADD\tI\t{:#03x}", register)
             }
             Opcode::StoreSpriteAddress(register) => {
-                write!(f, "SET_SPRITE\t{:x}", register)
+                write!(f, "SET_SPRITE\t{:#03x}", register)
             }
             Opcode::BinaryCodedDecimal(register) => {
-                write!(f, "BCD\t{:x}", register)
+                write!(f, "BCD\t{:#03x}", register)
             }
             Opcode::Dump(register) => {
-                write!(f, "DUMP\t{:x}", register)
+                write!(f, "DUMP\t{:#03x}", register)
             }
             Opcode::Load(register) => {
-                write!(f, "LOAD\t{:x}", register)
+                write!(f, "LOAD\t{:#03x}", register)
             }
         }
     }
+}
+
+fn build_data(nibbles: [u8; 4]) -> (Data, Data) {
+    let first = nibbles[0] as u16;
+    let second = nibbles[1] as u16;
+
+    let third = nibbles[2] as u16;
+    let fourth = nibbles[3] as u16;
+
+    let left = (first << 4) + second;
+    let right = (third << 4) + fourth;
+
+    (Data(left), Data(right))
 }
 
 fn build_address(nibbles: [u8; 4]) -> Address {
