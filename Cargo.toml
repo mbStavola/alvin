@@ -1,0 +1,8 @@
+[package]
+name = "alvin"
+version = "0.1.0"
+description = "A simple CHIP-8 emulator."
+authors = ["Matt Stavola"]
+
+[dependencies]
+clap = "^2.26.1"
