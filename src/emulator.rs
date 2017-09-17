@@ -1,3 +1,6 @@
+use rand;
+use rand::distributions::{IndependentSample, Range};
+
 use std::time::Instant;
 use std::collections::VecDeque;
 
@@ -18,6 +21,7 @@ pub struct System {
     sound_timer: Constant,
     program_counter: Address,
 
+    rng: rand::ThreadRng,
     last_tick: Instant,
 }
 
@@ -44,13 +48,14 @@ impl System {
             sound_timer: 0,
             program_counter: 0x200,
 
+            rng: rand::thread_rng(),
             last_tick: Instant::now()
         }
     }
 
-    pub fn run(&mut self) {
-        println!("PC\tDELAY\tSOUND\tOP\tARG1\tARG2\tARG3");
-        println!("--\t-----\t-----\t--\t----\t----\t----");
+    pub fn run(&mut self) -> Result<(), ()> {
+        println!("PC\tDELAY\tSOUND\tOP\tARG1\tARG2\tARG3\tVA");
+        println!("--\t-----\t-----\t--\t----\t----\t----\t--");
         loop {
             let first_address = self.program_counter as usize;
             let second_address = (self.program_counter + 1) as usize;
@@ -58,12 +63,12 @@ impl System {
             let first_byte = self.memory[first_address];
             let second_byte = self.memory[second_address];
 
-            print!("{:#04x}\t{}\t{}\t", self.program_counter, self.delay_timer, self.sound_timer);
+            print!("{:#04x}\t{}\t{}\t{}\t", self.program_counter, self.delay_timer, self.sound_timer, self.get_register(0xA));
             match Opcode::from(first_byte, second_byte) {
                 Ok(opcode) => {
                     println!("{:?}", opcode);
-                    self.process_opcode(opcode);
-                },
+                    self.process_opcode(opcode)?;
+                }
                 Err((first, second)) => {
                     println!("DATA\t{:x}{:x}", first.0, second.0);
                     self.program_counter += WORD_SIZE;
@@ -74,7 +79,7 @@ impl System {
         }
     }
 
-    fn process_opcode(&mut self, opcode: Opcode) {
+    fn process_opcode(&mut self, opcode: Opcode) -> Result<(), ()> {
         match opcode {
             Opcode::Call(address) => {
                 self.program_counter += WORD_SIZE;
@@ -84,10 +89,10 @@ impl System {
             }
             Opcode::Return => {
                 if let Some(address) = self.stack.pop_front() {
-                    self.program_counter = address;
+                    self.program_counter = address + WORD_SIZE;
                 } else {
                     println!("NOWHERE TO RETURN");
-                    self.program_counter += WORD_SIZE;
+                    return Err(());
                 }
             }
             Opcode::Goto(address) => {
@@ -124,7 +129,7 @@ impl System {
             }
             Opcode::AddAssign(register, constant) => {
                 let value = self.get_register(register);
-                self.set_register(register, register.wrapping_add(constant));
+                self.set_register(register, value.wrapping_add(constant));
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Copy(to, from) => {
@@ -219,13 +224,24 @@ impl System {
                 self.program_counter = self.get_register(0x0) as u16 + self.address_register;
             }
             Opcode::SetRand(register, constant) => {
+                let range = Range::new(0, constant);
+                let random_value = range.ind_sample(&mut self.rng);
+
+                self.set_register(register, constant);
+
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Draw(first, second, constant) => {
                 self.program_counter += WORD_SIZE;
             }
-            Opcode::SkipKeyPress(register) => {}
-            Opcode::SkipNoKeyPress(register) => {}
+            Opcode::SkipKeyPress(register) => {
+                // TODO(Matt): Handle key events
+                unimplemented!();
+            }
+            Opcode::SkipNoKeyPress(register) => {
+                // TODO(Matt): Handle key events
+                unimplemented!();
+            }
             Opcode::StoreDelayTimer(register) => {
                 let delay = self.delay_timer;
                 self.set_register(register, delay);
@@ -273,17 +289,23 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
         }
+
+        Ok(())
     }
 
     fn tick(&mut self, rate: u8) {
-        let elapsed = (self.last_tick.elapsed().as_secs() % (rate as u64)) as u8;
+        let elapsed = (self.last_tick.elapsed().subsec_nanos() % (rate as u32)) as u8;
 
-        if self.delay_timer > 0 {
+        if self.delay_timer >= elapsed {
             self.delay_timer -= elapsed;
+        } else {
+            self.delay_timer = 0;
         }
 
-        if self.sound_timer > 0 {
+        if self.sound_timer >= elapsed {
             self.sound_timer -= elapsed;
+        } else {
+            self.sound_timer = 0;
         }
 
         self.last_tick = Instant::now();

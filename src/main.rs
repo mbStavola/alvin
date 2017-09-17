@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate clap;
 
+extern crate rand;
+
 mod opcode;
 mod emulator;
 mod disassembler;
