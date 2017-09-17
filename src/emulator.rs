@@ -254,18 +254,18 @@ impl System {
             }
             Opcode::Dump(register) => {
                 for i in 0..(register + 1) {
-                    let to_register = self.address_register as u8;
+                    let memory_location = self.address_register;
                     let value = self.get_register(i);
 
-                    self.set_register(to_register, value);
+                    self.set_memory(memory_location, value);
                     self.address_register += 1;
                 }
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Load(register) => {
                 for i in 0..(register + 1) {
-                    let from_register = self.address_register as u8;
-                    let value = self.get_register(from_register);
+                    let memory_location = self.address_register;
+                    let value = self.get_memory(memory_location);
 
                     self.set_register(i, value);
                     self.address_register += 1;
@@ -299,5 +299,13 @@ impl System {
 
     fn set_flag_register(&mut self, value: Constant) {
         self.registers[15] = value;
+    }
+
+    fn get_memory(&mut self, address: Address) -> Constant {
+        self.memory[address as usize]
+    }
+
+    fn set_memory(&mut self, address: Address, value: Constant) {
+        self.memory[address as usize] = value;
     }
 }
