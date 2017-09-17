@@ -29,7 +29,14 @@ fn main() {
             .required(true)
         )
         .subcommand(clap::SubCommand::with_name("disassemble"))
-        .subcommand(clap::SubCommand::with_name("run"))
+        .subcommand(clap::SubCommand::with_name("run")
+            .arg(Arg::with_name("cli")
+                .long("cli")
+                .help("Launch in cli mode")
+                .takes_value(false)
+                .required(false)
+            )
+        )
         .get_matches();
 
     let filename = matches.value_of("file").expect("file is required");
@@ -42,7 +49,12 @@ fn main() {
         Some("disassemble") => disassemble(buffer),
         Some("run") => {
             let mut system = System::new(buffer);
-            system.run_gui();
+
+            if matches.subcommand_matches("run").unwrap().is_present("cli") {
+                system.run_cli();
+            } else {
+                system.run_gui();
+            }
         }
         _ => {
             println!("ERROR: command invalid or not provided")
