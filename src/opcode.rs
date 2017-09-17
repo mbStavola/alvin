@@ -224,8 +224,8 @@ fn build_data(nibbles: [u8; 4]) -> (Data, Data) {
     let third = nibbles[2] as u16;
     let fourth = nibbles[3] as u16;
 
-    let left = (first << 4) + second;
-    let right = (third << 4) + fourth;
+    let left = (first << 4) | second;
+    let right = (third << 4) | fourth;
 
     (Data(left), Data(right))
 }
@@ -235,9 +235,9 @@ fn build_address(nibbles: [u8; 4]) -> Address {
     let second = nibbles[2] as u16;
     let third = nibbles[3] as u16;
 
-    (first << 8) + (second << 4) + third
+    (first << 8) | (second << 4) | third
 }
 
 fn build_constant(nibbles: [u8; 4]) -> Constant {
-    (nibbles[2] << 4) + nibbles[3]
+    (nibbles[2] << 4) | nibbles[3]
 }

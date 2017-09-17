@@ -4,7 +4,10 @@ extern crate clap;
 extern crate rand;
 extern crate sdl2;
 
+mod input;
 mod opcode;
+mod memory;
+mod display;
 mod emulator;
 mod disassembler;
 
