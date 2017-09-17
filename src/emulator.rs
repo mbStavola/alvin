@@ -1,6 +1,16 @@
 use rand;
+use sdl2;
+use sdl2::EventPump;
+use sdl2::rect::Rect;
+use sdl2::rect::Point;
+use sdl2::event::Event;
+use std::time::Duration;
+use sdl2::video::Window;
+use sdl2::render::Canvas;
+use sdl2::keyboard::Keycode;
 use rand::distributions::{IndependentSample, Range};
 
+use std::thread;
 use std::time::Instant;
 use std::collections::VecDeque;
 
@@ -50,11 +60,11 @@ impl System {
             program_counter: 0x200,
 
             rng: rand::thread_rng(),
-            last_tick: Instant::now()
+            last_tick: Instant::now(),
         }
     }
 
-    pub fn run(&mut self) -> Result<(), ()> {
+    pub fn run_cli(&mut self) -> Result<(), ()> {
         println!("PC\tDELAY\tSOUND\tOP\tARG1\tARG2\tARG3");
         println!("--\t-----\t-----\t--\t----\t----\t----");
         loop {
@@ -68,7 +78,7 @@ impl System {
             match Opcode::from(first_byte, second_byte) {
                 Ok(opcode) => {
                     println!("{:?}", opcode);
-                    self.process_opcode(opcode)?;
+                    self.process_opcode(opcode, None, None)?;
                 }
                 Err((first, second)) => {
                     println!("DATA\t{:x}{:x}", first.0, second.0);
@@ -80,7 +90,44 @@ impl System {
         }
     }
 
-    fn process_opcode(&mut self, opcode: Opcode) -> Result<(), ()> {
+    pub fn run_gui(&mut self) -> Result<(), ()> {
+        let sdl_context = sdl2::init().unwrap();
+        let video_subsystem = sdl_context.video().unwrap();
+
+        let window = video_subsystem.window("Alvin", 640, 320)
+            .position_centered().build().unwrap();
+
+        let mut canvas = window.into_canvas().accelerated().build().unwrap();
+        let mut event_pump = sdl_context.event_pump().unwrap();
+
+        let mut running = true;
+        while running {
+            for event in event_pump.poll_iter() {
+                match event {
+                    Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                        running = false;
+                    }
+                    _ => {}
+                }
+            }
+
+            let first_address = self.program_counter as usize;
+            let second_address = (self.program_counter + 1) as usize;
+
+            let first_byte = self.memory[first_address];
+            let second_byte = self.memory[second_address];
+
+            if let Ok(opcode) = Opcode::from(first_byte, second_byte) {
+                self.process_opcode(opcode, Some(&mut event_pump), Some(&mut canvas))?;
+            }
+
+            self.tick(60);
+        }
+
+        Err(())
+    }
+
+    fn process_opcode(&mut self, opcode: Opcode, event_pump: Option<&mut EventPump>, canvas: Option<&mut Canvas<Window>>) -> Result<(), ()> {
         match opcode {
             Opcode::Call(address) => {
                 self.program_counter += WORD_SIZE;
@@ -236,12 +283,42 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::SkipKeyPress(register) => {
-                // TODO(Matt): Handle key events
-                unimplemented!();
+                if let Some(event_pump) = event_pump {
+                    match event_pump.poll_event() {
+                        Some(Event::KeyDown { keycode, .. }) => {
+                            if let Some(keycode) = keycode {
+                                let expected = self.get_register(register) as i32;
+
+                                if expected == key_map(keycode) {
+                                    self.program_counter += 2 * WORD_SIZE;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                self.program_counter += WORD_SIZE;
             }
             Opcode::SkipNoKeyPress(register) => {
-                // TODO(Matt): Handle key events
-                unimplemented!();
+                if let Some(event_pump) = event_pump {
+                    match event_pump.poll_event() {
+                        Some(Event::KeyDown { keycode, .. }) => {
+                            if let Some(keycode) = keycode {
+                                let expected = self.get_register(register) as i32;
+
+                                if expected != key_map(keycode) {
+                                    self.program_counter += 2 * WORD_SIZE;
+                                    return Ok(());
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                self.program_counter += WORD_SIZE;
             }
             Opcode::StoreDelayTimer(register) => {
                 let delay = self.delay_timer;
@@ -249,6 +326,17 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::StoreKeypress(register) => {
+                if let Some(event_pump) = event_pump {
+                    match event_pump.wait_event() {
+                        Event::KeyDown { keycode, .. } => {
+                            if let Some(keycode) = keycode {
+                                self.set_register(register, key_map(keycode) as u8);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
                 self.program_counter += WORD_SIZE;
             }
             Opcode::SetDelayTimer(register) => {
@@ -330,6 +418,31 @@ impl System {
 
     fn set_memory(&mut self, address: Address, value: Constant) {
         self.memory[address as usize] = value;
+    }
+}
+
+fn key_map(keycode: Keycode) -> i32 {
+    match keycode {
+        Keycode::Num1 => 0x1,
+        Keycode::Num2 => 0x2,
+        Keycode::Num3 => 0x3,
+        Keycode::Num4 => 0xC,
+
+        Keycode::Q => 0x4,
+        Keycode::W => 0x5,
+        Keycode::E => 0x6,
+        Keycode::R => 0xD,
+
+        Keycode::A => 0x7,
+        Keycode::S => 0x8,
+        Keycode::D => 0x9,
+        Keycode::F => 0xE,
+
+        Keycode::Z => 0xA,
+        Keycode::X => 0x0,
+        Keycode::C => 0xB,
+        Keycode::V => 0xF,
+        _ => -1
     }
 }
 

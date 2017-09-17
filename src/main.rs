@@ -2,6 +2,7 @@
 extern crate clap;
 
 extern crate rand;
+extern crate sdl2;
 
 mod opcode;
 mod emulator;
@@ -41,7 +42,7 @@ fn main() {
         Some("disassemble") => disassemble(buffer),
         Some("run") => {
             let mut system = System::new(buffer);
-            system.run();
+            system.run_gui();
         }
         _ => {
             println!("ERROR: command invalid or not provided")
