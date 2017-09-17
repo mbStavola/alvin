@@ -311,17 +311,17 @@ impl System {
 
                             self.display[y][x] ^= highest_bit;
 
-                            if x == self.display[y].len() - 1 {
-                                x = 0;
+                            if y == self.display.len() - 1 {
+                                y = 0;
                             } else {
-                                x += 1;
+                                y += 1;
                             }
                         }
 
-                        if y == self.display.len() - 1 {
-                            y = 0;
+                        if x == self.display[y].len() - 1 {
+                            x = 0;
                         } else {
-                            y += 1;
+                            x += 1;
                         }
                     }
 
