@@ -232,8 +232,8 @@ fn build_data(nibbles: [u8; 4]) -> (Data, Data) {
 
 fn build_address(nibbles: [u8; 4]) -> Address {
     let first = nibbles[1] as u16;
-    let third = nibbles[2] as u16;
-    let second = nibbles[3] as u16;
+    let second = nibbles[2] as u16;
+    let third = nibbles[3] as u16;
 
     (first << 8) + (second << 4) + third
 }
