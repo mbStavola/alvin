@@ -129,6 +129,7 @@ impl System {
             }
 
             self.tick(60);
+            thread::sleep_ms(1);
         }
 
         Err(())
@@ -142,6 +143,7 @@ impl System {
             Opcode::Clear => {
                 if let Some(canvas) = canvas {
                     canvas.set_draw_color(BG_COLOR);
+                    self.display = [[false; 32]; 64];
                     canvas.clear();
                     canvas.present();
                 }
@@ -415,9 +417,43 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::StoreSpriteAddress(register) => {
+                let value = self.get_register(register) as u16;
+                self.address_register = match value {
+                    0x0 => 0x000,
+                    0x1 => 0x005,
+                    0x2 => 0x00A,
+                    0x3 => 0x00F,
+
+                    0x4 => 0x014,
+                    0x5 => 0x019,
+                    0x6 => 0x024,
+                    0x7 => 0x029,
+
+                    0x8 => 0x034,
+                    0x9 => 0x039,
+                    0xA => 0x044,
+                    0xB => 0x049,
+
+                    0xC => 0x054,
+                    0xD => 0x059,
+                    0xE => 0x064,
+                    0xF => 0x069,
+                    _ => 0x000,
+                };
                 self.program_counter += WORD_SIZE;
             }
             Opcode::BinaryCodedDecimal(register) => {
+                let memory_location = self.address_register;
+                let value = self.get_register(register) as u16;
+
+                let ones = value & 0xF;
+                let tens = (value & 0xF0) >> 4;
+                let hundreds = (value & 0xF00) >> 8;
+
+                self.set_memory(memory_location, ones as u8);
+                self.set_memory(memory_location + 1, tens as u8);
+                self.set_memory(memory_location + 2, hundreds as u8);
+
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Dump(register) => {
