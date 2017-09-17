@@ -4,6 +4,7 @@ use sdl2::EventPump;
 use sdl2::rect::Rect;
 use sdl2::rect::Point;
 use sdl2::event::Event;
+use sdl2::pixels::Color;
 use std::time::Duration;
 use sdl2::video::Window;
 use sdl2::render::Canvas;
@@ -30,6 +31,7 @@ pub struct System {
     delay_timer: Constant,
     sound_timer: Constant,
     program_counter: Address,
+    display: [[bool; 32]; 64],
 
     rng: rand::ThreadRng,
     last_tick: Instant,
@@ -58,6 +60,7 @@ impl System {
             delay_timer: 0,
             sound_timer: 0,
             program_counter: 0x200,
+            display: [[false; 32]; 64],
 
             rng: rand::thread_rng(),
             last_tick: Instant::now(),
@@ -98,6 +101,10 @@ impl System {
             .position_centered().build().unwrap();
 
         let mut canvas = window.into_canvas().accelerated().build().unwrap();
+        canvas.set_scale(10.0, 10.0);
+        canvas.set_draw_color(BG_COLOR);
+        canvas.clear();
+
         let mut event_pump = sdl_context.event_pump().unwrap();
 
         let mut running = true;
@@ -133,6 +140,12 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Clear => {
+                if let Some(canvas) = canvas {
+                    canvas.set_draw_color(BG_COLOR);
+                    canvas.clear();
+                    canvas.present();
+                }
+
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Return => {
@@ -280,6 +293,54 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Draw(first, second, constant) => {
+                // TODO(Matt): This kinda sucks... Let's not do it bad next time, okay?
+                if let Some(canvas) = canvas {
+                    let mut x = self.get_register(second) as usize;
+                    for i in self.address_register..(self.address_register + constant as u16) {
+                        let mut sprite = self.get_memory(i);
+
+                        let mut y = self.get_register(first) as usize;
+
+                        for _ in 0x0..0x8 {
+                            let highest_bit = (sprite & 0x80) == 0x80;
+                            sprite = sprite << 1;
+
+                            if self.display[y][x] & highest_bit {
+                                self.set_flag_register(0x1);
+                            }
+
+                            self.display[y][x] ^= highest_bit;
+
+                            if x == self.display[y].len() - 1 {
+                                x = 0;
+                            } else {
+                                x += 1;
+                            }
+                        }
+
+                        if y == self.display.len() - 1 {
+                            y = 0;
+                        } else {
+                            y += 1;
+                        }
+                    }
+
+                    for i in 0..self.display.len() {
+                        for j in 0..self.display[i].len() {
+                            let color = if self.display[i][j] {
+                                FG_COLOR
+                            } else {
+                                BG_COLOR
+                            };
+
+                            canvas.set_draw_color(color);
+                            canvas.draw_point(Point::new(i as i32, j as i32));
+                        }
+                    }
+
+                    canvas.present();
+                }
+
                 self.program_counter += WORD_SIZE;
             }
             Opcode::SkipKeyPress(register) => {
@@ -327,17 +388,19 @@ impl System {
             }
             Opcode::StoreKeypress(register) => {
                 if let Some(event_pump) = event_pump {
-                    match event_pump.wait_event() {
-                        Event::KeyDown { keycode, .. } => {
-                            if let Some(keycode) = keycode {
-                                self.set_register(register, key_map(keycode) as u8);
+                    loop {
+                        match event_pump.wait_event() {
+                            Event::KeyDown { keycode, .. } => {
+                                if let Some(keycode) = keycode {
+                                    self.set_register(register, key_map(keycode) as u8);
+                                    self.program_counter += WORD_SIZE;
+                                    return Ok(());
+                                }
                             }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
-
-                self.program_counter += WORD_SIZE;
             }
             Opcode::SetDelayTimer(register) => {
                 self.delay_timer = self.get_register(register);
@@ -420,6 +483,9 @@ impl System {
         self.memory[address as usize] = value;
     }
 }
+
+const BG_COLOR: Color = Color { r: 53, g: 59, b: 115, a: 0xFF };
+const FG_COLOR: Color = Color { r: 255, g: 255, b: 41, a: 0xFF };
 
 fn key_map(keycode: Keycode) -> i32 {
     match keycode {
