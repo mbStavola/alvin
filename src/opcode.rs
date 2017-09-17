@@ -24,7 +24,7 @@ pub enum Opcode {
     ShiftLeft(Register, Register),
     SkipNEqReg(Register, Register),
     SetAddressReg(Address),
-    JumpOffset(Constant),
+    JumpOffset(Address),
     SetRand(Register, Constant),
     Draw(Register, Register, Constant),
     SkipKeyPress(Register),
@@ -80,7 +80,7 @@ impl Opcode {
             },
             0x9 => Ok(Opcode::SkipNEqReg(nibbles[1], nibbles[2])),
             0xA => Ok(Opcode::SetAddressReg(build_address(nibbles))),
-            0xB => Ok(Opcode::JumpOffset(build_constant(nibbles))),
+            0xB => Ok(Opcode::JumpOffset(build_address(nibbles))),
             0xC => Ok(Opcode::SetRand(nibbles[1], build_constant(nibbles))),
             0xD => Ok(Opcode::Draw(nibbles[1], nibbles[2], nibbles[3])),
             0xE => match (nibbles[2], nibbles[3]) {
@@ -171,8 +171,8 @@ impl fmt::Debug for Opcode {
             Opcode::SetAddressReg(address) => {
                 write!(f, "SET\tI\t{:#03x}", address)
             }
-            Opcode::JumpOffset(constant) => {
-                write!(f, "OFF\t{}", constant)
+            Opcode::JumpOffset(address) => {
+                write!(f, "OFF\t{:#03x}", address)
             }
             Opcode::SetRand(register, constant) => {
                 write!(f, "RND\tV{:X}\t{}", register, constant)

@@ -22,6 +22,12 @@ impl Input {
                 Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     return Some(InputAction::Quit);
                 }
+                Event::KeyDown { keycode: Some(Keycode::Return), .. } => {
+                    return Some(InputAction::Reset);
+                }
+                Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
+                    return Some(InputAction::Pause);
+                }
                 Event::KeyDown { keycode: Some(Keycode::LeftBracket), .. } => {
                     return Some(InputAction::DecreaseTick);
                 }
@@ -68,6 +74,8 @@ impl Input {
 
 pub enum InputAction {
     Quit,
+    Reset,
+    Pause,
     DecreaseTick,
     IncreaseTick
 }

@@ -90,9 +90,24 @@ impl System {
     pub fn run_gui(&mut self) -> Result<(), ()> {
         let mut sleep_rate = 1;
         let mut running = true;
+        let mut paused = false;
+
         while running {
             match self.input.handle_input() {
                 Some(InputAction::Quit) => running = false,
+                Some(InputAction::Reset) => {
+                    // We're going to need to reset program memory as well
+
+                    self.registers = [0; 16];
+                    self.address_register = 0x0;
+                    self.stack.clear();
+                    self.delay_timer = 0;
+                    self.sound_timer = 0;
+                    self.program_counter = 0x200;
+
+                    self.display.clear();
+                }
+                Some(InputAction::Pause) => paused = !paused,
                 Some(InputAction::DecreaseTick) => {
                     if sleep_rate >= 10 {
                         sleep_rate -= 10;
@@ -104,6 +119,10 @@ impl System {
                     sleep_rate += 10;
                 }
                 _ => {}
+            }
+
+            if paused {
+                continue;
             }
 
             let first_address = self.program_counter as usize;
@@ -125,7 +144,7 @@ impl System {
 
     fn process_opcode(&mut self, opcode: Opcode) -> Result<(), ()> {
         match opcode {
-            Opcode::Call(address) => {
+            Opcode::Call(_) => {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Clear => {
@@ -265,14 +284,14 @@ impl System {
                 self.address_register = address;
                 self.program_counter += WORD_SIZE;
             }
-            Opcode::JumpOffset(constant) => {
-                self.program_counter = self.get_register(0x0) as u16 + self.address_register;
+            Opcode::JumpOffset(address) => {
+                self.program_counter = address + self.get_register(0x0) as u16;
             }
             Opcode::SetRand(register, constant) => {
                 let range = Range::new(0, constant);
                 let random_value = range.ind_sample(&mut self.rng);
 
-                self.set_register(register, constant);
+                self.set_register(register, random_value);
 
                 self.program_counter += WORD_SIZE;
             }
@@ -280,9 +299,9 @@ impl System {
                 // TODO(Matt): This kinda sucks... Let's not do it bad next time, okay?
                 let mut x = self.get_register(second);
                 for i in self.address_register..(self.address_register + constant as u16) {
-                    let mut sprite = self.get_memory(i);
+                    let sprite = self.get_memory(i);
 
-                    let mut y = self.get_register(first);
+                    let y = self.get_register(first);
 
                     self.display.draw(x, y, sprite);
 
