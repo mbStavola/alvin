@@ -22,7 +22,13 @@ impl Input {
                 Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     return Some(InputAction::Quit);
                 }
+                Event::Quit { .. } | Event::KeyUp { keycode: Some(Keycode::Escape), .. } => {
+                    return Some(InputAction::Quit);
+                }
                 Event::KeyDown { keycode: Some(Keycode::Return), .. } => {
+                    return Some(InputAction::Reset);
+                }
+                Event::KeyUp { keycode: Some(Keycode::Return), .. } => {
                     return Some(InputAction::Reset);
                 }
                 Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
@@ -33,6 +39,12 @@ impl Input {
                 }
                 Event::KeyDown { keycode: Some(Keycode::RightBracket), .. } => {
                     return Some(InputAction::IncreaseTick);
+                }
+                Event::KeyDown { keycode: Some(Keycode::Tab), .. } => {
+                    return Some(InputAction::DebugInfo);
+                }
+                Event::KeyUp { keycode: Some(Keycode::Tab), .. } => {
+                    return Some(InputAction::DebugInfo);
                 }
                 _ => {}
             }
@@ -77,7 +89,8 @@ pub enum InputAction {
     Reset,
     Pause,
     DecreaseTick,
-    IncreaseTick
+    IncreaseTick,
+    DebugInfo
 }
 
 pub fn key_map(keycode: Keycode) -> Option<u8> {

@@ -5,6 +5,7 @@ extern crate rand;
 extern crate sdl2;
 
 mod input;
+mod sound;
 mod opcode;
 mod memory;
 mod display;

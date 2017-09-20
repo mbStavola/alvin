@@ -41,8 +41,8 @@ impl Display {
         self.canvas.present();
     }
 
-    pub fn draw(&mut self, x: u8, y: u8, mut sprite: u8) -> u8 {
-        let mut collision = 0x0;
+    pub fn draw(&mut self, x: u8, y: u8, mut sprite: u8) -> bool {
+        let mut collision = false;
 
         let x = x as usize;
         let mut y = y as usize;
@@ -51,9 +51,7 @@ impl Display {
             let highest_bit = (sprite & 0x80) == 0x80;
             sprite = sprite << 1;
 
-            if self.working_screen[y][x] {
-                collision = 0x1;
-            }
+            collision |= self.working_screen[y][x];
 
             self.working_screen[y][x] ^= highest_bit;
 

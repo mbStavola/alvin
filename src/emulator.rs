@@ -7,6 +7,7 @@ use std::thread;
 use std::time::Instant;
 use std::collections::VecDeque;
 
+use sound::Sound;
 use opcode::Opcode;
 use display::Display;
 use input::{Input, InputAction};
@@ -29,9 +30,9 @@ pub struct System {
 
     display: Display,
     input: Input,
+    sound: Sound,
 
     rng: rand::ThreadRng,
-    last_tick: Instant,
 }
 
 impl System {
@@ -43,6 +44,7 @@ impl System {
         let sdl_context = sdl2::init().unwrap();
         let display = Display::new(&sdl_context);
         let input = Input::new(&sdl_context);
+        let sound = Sound::new(&sdl_context);
 
         System {
             memory,
@@ -55,9 +57,9 @@ impl System {
 
             display,
             input,
+            sound,
 
             rng: rand::thread_rng(),
-            last_tick: Instant::now(),
         }
     }
 
@@ -82,13 +84,11 @@ impl System {
                     self.program_counter += WORD_SIZE;
                 }
             }
-
-            self.tick(60);
         }
     }
 
     pub fn run_gui(&mut self) -> Result<(), ()> {
-        let mut sleep_rate = 1;
+        let mut tick_rate = 16;
         let mut running = true;
         let mut paused = false;
 
@@ -109,14 +109,29 @@ impl System {
                 }
                 Some(InputAction::Pause) => paused = !paused,
                 Some(InputAction::DecreaseTick) => {
-                    if sleep_rate >= 10 {
-                        sleep_rate -= 10;
+                    if tick_rate >= 8 {
+                        tick_rate -= 4;
                     } else {
-                        sleep_rate = 1;
+                        tick_rate = 4;
                     }
                 }
                 Some(InputAction::IncreaseTick) => {
-                    sleep_rate += 10;
+                    tick_rate += 4;
+                }
+                Some(InputAction::DebugInfo) => {
+                    print!("PC[{:#04x}]\tDELAY[{}]\tSOUND[{}]\tI[{:#03x}]", self.program_counter, self.delay_timer, self.sound_timer, self.address_register);
+                    for i in 0x0..0x10 {
+                        print!("\tV{:X}[{}]", i, self.get_register(i));
+                    }
+
+                    let first_address = self.program_counter as usize;
+                    let second_address = (self.program_counter + 1) as usize;
+
+                    let first_byte = self.memory[first_address];
+                    let second_byte = self.memory[second_address];
+
+                    let op = Opcode::from(first_byte, second_byte).unwrap();
+                    println!("\t{:?}", op);
                 }
                 _ => {}
             }
@@ -135,8 +150,7 @@ impl System {
                 self.process_opcode(opcode)?;
             }
 
-            self.tick(60);
-            thread::sleep_ms(sleep_rate);
+            self.tick(tick_rate);
         }
 
         Err(())
@@ -220,12 +234,20 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::AddAssignReg(first, second) => {
-                let first_value = self.get_register(first);
-                let second_value = self.get_register(second);
+                let first_value = self.get_register(first) as u16;
+                let second_value = self.get_register(second) as u16;
 
-                let (result, carry) = first_value.overflowing_add(second_value);
-                self.set_register(first, result);
-                self.set_flag_register(if carry { 1 } else { 0 });
+                let mut result = first_value + second_value;
+
+                if result > 255 {
+                    result = result & 0xFF;
+                    self.set_flag_register(0x1);
+                } else {
+                    self.set_flag_register(0x0);
+                }
+
+                self.set_register(first, result as u8);
+
 
                 self.program_counter += WORD_SIZE;
             }
@@ -233,9 +255,14 @@ impl System {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
 
-                let (result, carry) = first_value.overflowing_sub(second_value);
+                if first_value > second_value {
+                    self.set_flag_register(0x1);
+                } else {
+                    self.set_flag_register(0x0);
+                }
+
+                let result = first_value.wrapping_sub(second_value);
                 self.set_register(first, result);
-                self.set_flag_register(if carry { 1 } else { 0 });
 
                 self.program_counter += WORD_SIZE;
             }
@@ -255,9 +282,14 @@ impl System {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
 
-                let (result, carry) = second_value.overflowing_sub(first_value);
+                if second_value > first_value {
+                    self.set_flag_register(0x1);
+                } else {
+                    self.set_flag_register(0x0);
+                }
+
+                let result = second_value.wrapping_sub(first_value);
                 self.set_register(first, result);
-                self.set_flag_register(if carry { 1 } else { 0 });
 
                 self.program_counter += WORD_SIZE;
             }
@@ -296,20 +328,27 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Draw(first, second, constant) => {
-                // TODO(Matt): This kinda sucks... Let's not do it bad next time, okay?
+                let mut collision = false;
+
                 let mut x = self.get_register(second);
                 for i in self.address_register..(self.address_register + constant as u16) {
                     let sprite = self.get_memory(i);
 
                     let y = self.get_register(first);
 
-                    self.display.draw(x, y, sprite);
+                    collision |= self.display.draw(x, y, sprite);
 
                     if (x as usize) == self.display.screen_dimensions().0 - 1 {
                         x = 0;
                     } else {
                         x += 1;
                     }
+                }
+
+                if collision {
+                    self.set_flag_register(0x1);
+                } else {
+                    self.set_flag_register(0x0);
                 }
 
                 self.display.render();
@@ -425,22 +464,32 @@ impl System {
         Ok(())
     }
 
-    fn tick(&mut self, rate: u8) {
-        let elapsed = (self.last_tick.elapsed().subsec_nanos() % (rate as u32)) as u8;
+    fn tick(&mut self, tick_rate: u32) {
+        let mut active_delay = self.delay_timer > 0;
+        let mut active_sound = self.sound_timer > 0;
 
-        if self.delay_timer >= elapsed {
-            self.delay_timer -= elapsed;
-        } else {
-            self.delay_timer = 0;
+        if active_sound {
+            self.sound.play()
         }
 
-        if self.sound_timer >= elapsed {
-            self.sound_timer -= elapsed;
-        } else {
-            self.sound_timer = 0;
+        while active_delay | active_sound {
+            if active_delay && self.delay_timer <= 0 {
+                self.delay_timer = 0;
+                active_delay = false;
+            } else if active_delay {
+                self.delay_timer -= 1;
+            }
+
+            if active_sound && self.sound_timer <= 0 {
+                self.sound_timer = 0;
+                self.sound.stop();
+                active_sound = false;
+            } else if active_sound {
+                self.sound_timer -= 1;
+            }
         }
 
-        self.last_tick = Instant::now();
+        thread::sleep_ms(tick_rate);
     }
 
     fn get_register(&self, register: Register) -> Constant {
