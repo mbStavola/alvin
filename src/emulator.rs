@@ -63,31 +63,7 @@ impl System {
         }
     }
 
-    pub fn run_cli(&mut self) -> Result<(), ()> {
-        println!("PC\tDELAY\tSOUND\tOP\tARG1\tARG2\tARG3");
-        println!("--\t-----\t-----\t--\t----\t----\t----");
-        loop {
-            let first_address = self.program_counter as usize;
-            let second_address = (self.program_counter + 1) as usize;
-
-            let first_byte = self.memory[first_address];
-            let second_byte = self.memory[second_address];
-
-            print!("{:#04x}\t{}\t{}\t", self.program_counter, self.delay_timer, self.sound_timer);
-            match Opcode::from(first_byte, second_byte) {
-                Ok(opcode) => {
-                    println!("{:?}", opcode);
-                    self.process_opcode(opcode)?;
-                }
-                Err((first, second)) => {
-                    println!("DATA\t{:x}{:x}", first.0, second.0);
-                    self.program_counter += WORD_SIZE;
-                }
-            }
-        }
-    }
-
-    pub fn run_gui(&mut self) -> Result<(), ()> {
+    pub fn run(&mut self, dump_state: bool) -> Result<(), ()> {
         let mut tick_rate = 16;
         let mut running = true;
         let mut paused = false;
@@ -119,25 +95,19 @@ impl System {
                     tick_rate += 4;
                 }
                 Some(InputAction::DebugInfo) => {
-                    print!("PC[{:#04x}]\tDELAY[{}]\tSOUND[{}]\tI[{:#03x}]", self.program_counter, self.delay_timer, self.sound_timer, self.address_register);
-                    for i in 0x0..0x10 {
-                        print!("\tV{:X}[{}]", i, self.get_register(i));
+                    if !dump_state {
+                        self.print_debug();
                     }
-
-                    let first_address = self.program_counter as usize;
-                    let second_address = (self.program_counter + 1) as usize;
-
-                    let first_byte = self.memory[first_address];
-                    let second_byte = self.memory[second_address];
-
-                    let op = Opcode::from(first_byte, second_byte).unwrap();
-                    println!("\t{:?}", op);
                 }
                 _ => {}
             }
 
             if paused {
                 continue;
+            }
+
+            if dump_state {
+                self.print_debug();
             }
 
             let first_address = self.program_counter as usize;
@@ -154,6 +124,22 @@ impl System {
         }
 
         Err(())
+    }
+
+    fn print_debug(&mut self) {
+        print!("PC[{:#04x}]\tDELAY[{}]\tSOUND[{}]\tI[{:#03x}]", self.program_counter, self.delay_timer, self.sound_timer, self.address_register);
+        for i in 0x0..0x10 {
+            print!("\tV{:X}[{}]", i, self.get_register(i));
+        }
+
+        let first_address = self.program_counter as usize;
+        let second_address = (self.program_counter + 1) as usize;
+
+        let first_byte = self.memory[first_address];
+        let second_byte = self.memory[second_address];
+
+        let op = Opcode::from(first_byte, second_byte).unwrap();
+        println!("\t{:?}", op);
     }
 
     fn process_opcode(&mut self, opcode: Opcode) -> Result<(), ()> {
@@ -207,7 +193,14 @@ impl System {
             }
             Opcode::AddAssign(register, constant) => {
                 let value = self.get_register(register);
-                self.set_register(register, value.wrapping_add(constant));
+
+                let mut result = if let Some(result) = value.checked_add(constant) {
+                    result
+                } else {
+                    (value as u16 + constant as u16) as u8
+                };
+
+                self.set_register(register, result);
                 self.program_counter += WORD_SIZE;
             }
             Opcode::Copy(to, from) => {
@@ -234,19 +227,18 @@ impl System {
                 self.program_counter += WORD_SIZE;
             }
             Opcode::AddAssignReg(first, second) => {
-                let first_value = self.get_register(first) as u16;
-                let second_value = self.get_register(second) as u16;
+                let first_value = self.get_register(first);
+                let second_value = self.get_register(second);
 
-                let mut result = first_value + second_value;
-
-                if result > 255 {
-                    result = result & 0xFF;
-                    self.set_flag_register(0x1);
-                } else {
+                let mut result = if let Some(result) = first_value.checked_add(second_value) {
                     self.set_flag_register(0x0);
-                }
+                    result
+                } else {
+                    self.set_flag_register(0x1);
+                    (first_value as u16 + second_value as u16) as u8
+                };
 
-                self.set_register(first, result as u8);
+                self.set_register(first, result);
 
 
                 self.program_counter += WORD_SIZE;
@@ -255,14 +247,13 @@ impl System {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
 
-                if first_value > second_value {
+                if first_value >= second_value {
                     self.set_flag_register(0x1);
                 } else {
                     self.set_flag_register(0x0);
                 }
 
-                let result = first_value.wrapping_sub(second_value);
-                self.set_register(first, result);
+                self.set_register(first, first_value.wrapping_sub(second_value));
 
                 self.program_counter += WORD_SIZE;
             }
@@ -282,14 +273,13 @@ impl System {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
 
-                if second_value > first_value {
+                if second_value >= first_value {
                     self.set_flag_register(0x1);
                 } else {
                     self.set_flag_register(0x0);
                 }
 
-                let result = second_value.wrapping_sub(first_value);
-                self.set_register(first, result);
+                self.set_register(first, second_value.wrapping_sub(first_value));
 
                 self.program_counter += WORD_SIZE;
             }
@@ -429,9 +419,9 @@ impl System {
                 let memory_location = self.address_register;
                 let value = self.get_register(register) as u16;
 
-                let ones = value & 0xF;
-                let tens = (value & 0xF0) >> 4;
-                let hundreds = (value & 0xF00) >> 8;
+                let ones = value / 100;
+                let tens = (value / 10) % 10;
+                let hundreds = (value % 100) % 10;
 
                 self.set_memory(memory_location, ones as u8);
                 self.set_memory(memory_location + 1, tens as u8);

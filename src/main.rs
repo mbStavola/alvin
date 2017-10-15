@@ -34,9 +34,9 @@ fn main() {
         )
         .subcommand(clap::SubCommand::with_name("disassemble"))
         .subcommand(clap::SubCommand::with_name("run")
-            .arg(Arg::with_name("cli")
-                .long("cli")
-                .help("Launch in cli mode")
+            .arg(Arg::with_name("debug")
+                .long("debug")
+                .help("Continuously dump emulator state to the command line")
                 .takes_value(false)
                 .required(false)
             )
@@ -54,11 +54,9 @@ fn main() {
         Some("run") => {
             let mut system = System::new(buffer);
 
-            if matches.subcommand_matches("run").unwrap().is_present("cli") {
-                system.run_cli();
-            } else {
-                system.run_gui();
-            }
+            let dump_state = matches.subcommand_matches("run").unwrap()
+                .is_present("debug");
+            system.run(dump_state);
         }
         _ => {
             println!("ERROR: command invalid or not provided")
