@@ -1,5 +1,5 @@
 # Alvin
-A mad cute CHIP-8 emulator for funsies.
+A mad cute CHIP-8 emulator for funsies!!
 
 ## Quick Start
 Simply use `cargo build` and provide `alvin` with the path to your CHIP-8 program: 
