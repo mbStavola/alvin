@@ -13,3 +13,6 @@ If you're looking for some CHIP-8 software to run, here are some links:
 - http://www.pong-story.com/chip8/
 
 Also a big thanks to Thomas P. Greene for compiling [this](http://devernay.free.fr/hacks/chip8/) amazing reference sheet!
+
+### More information about Chip-8
+- https://en.wikipedia.org/wiki/CHIP-8
