@@ -1,8 +1,8 @@
 use sdl2;
-use sdl2::audio::{AudioDevice, AudioCallback, AudioSpecDesired};
+use sdl2::audio::{AudioCallback, AudioDevice, AudioSpecDesired};
 
 pub struct Sound {
-    device: AudioDevice<SquareWave>
+    device: AudioDevice<SquareWave>,
 }
 
 impl Sound {
@@ -12,20 +12,17 @@ impl Sound {
         let spec = AudioSpecDesired {
             freq: Some(44100),
             channels: Some(1),
-            samples: None
+            samples: None,
         };
 
-        let device = audio.open_playback(None, &spec, |spec| {
-            SquareWave {
+        let device = audio
+            .open_playback(None, &spec, |spec| SquareWave {
                 phase_inc: 440.0 / spec.freq as f32,
                 phase: 0.0,
-                volume: 0.25
-            }
-        }).unwrap();
+                volume: 0.25,
+            }).unwrap();
 
-        Sound {
-            device
-        }
+        Sound { device }
     }
 
     pub fn play(&self) {
@@ -40,7 +37,7 @@ impl Sound {
 struct SquareWave {
     phase_inc: f32,
     phase: f32,
-    volume: f32
+    volume: f32,
 }
 
 impl AudioCallback for SquareWave {
@@ -49,8 +46,8 @@ impl AudioCallback for SquareWave {
     fn callback(&mut self, out: &mut [f32]) {
         for x in out.iter_mut() {
             *x = match self.phase {
-                0.0 ... 0.5 => self.volume,
-                _ => -self.volume
+                0.0...0.5 => self.volume,
+                _ => -self.volume,
             };
             self.phase = (self.phase + self.phase_inc) % 1.0;
         }

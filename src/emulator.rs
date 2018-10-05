@@ -3,15 +3,15 @@ use sdl2;
 
 use rand::distributions::{IndependentSample, Range};
 
+use std::collections::VecDeque;
 use std::thread;
 use std::time::Instant;
-use std::collections::VecDeque;
 
-use sound::Sound;
-use opcode::Opcode;
 use display::Display;
 use input::{Input, InputAction};
 use memory::{load_fonts, load_program};
+use opcode::Opcode;
+use sound::Sound;
 
 pub type Address = u16;
 pub type Constant = u8;
@@ -127,7 +127,10 @@ impl System {
     }
 
     fn print_debug(&mut self) {
-        print!("PC[{:#04x}]\tDELAY[{}]\tSOUND[{}]\tI[{:#03x}]", self.program_counter, self.delay_timer, self.sound_timer, self.address_register);
+        print!(
+            "PC[{:#04x}]\tDELAY[{}]\tSOUND[{}]\tI[{:#03x}]",
+            self.program_counter, self.delay_timer, self.sound_timer, self.address_register
+        );
         for i in 0x0..0x10 {
             print!("\tV{:X}[{}]", i, self.get_register(i));
         }
@@ -239,7 +242,6 @@ impl System {
                 };
 
                 self.set_register(first, result);
-
 
                 self.program_counter += WORD_SIZE;
             }
