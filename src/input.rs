@@ -1,49 +1,76 @@
 use sdl2;
-use sdl2::EventPump;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use sdl2::EventPump;
 
 pub struct Input {
-    event_pump: EventPump
+    event_pump: EventPump,
 }
 
 impl Input {
     pub fn new(sdl_context: &sdl2::Sdl) -> Input {
         let event_pump = sdl_context.event_pump().unwrap();
 
-        Input {
-            event_pump
-        }
+        Input { event_pump }
     }
 
     pub fn handle_input(&mut self) -> Option<InputAction> {
         for event in self.event_pump.poll_iter() {
             match event {
-                Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => {
                     return Some(InputAction::Quit);
                 }
-                Event::Quit { .. } | Event::KeyUp { keycode: Some(Keycode::Escape), .. } => {
+                Event::Quit { .. }
+                | Event::KeyUp {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => {
                     return Some(InputAction::Quit);
                 }
-                Event::KeyDown { keycode: Some(Keycode::Return), .. } => {
+                Event::KeyDown {
+                    keycode: Some(Keycode::Return),
+                    ..
+                } => {
                     return Some(InputAction::Reset);
                 }
-                Event::KeyUp { keycode: Some(Keycode::Return), .. } => {
+                Event::KeyUp {
+                    keycode: Some(Keycode::Return),
+                    ..
+                } => {
                     return Some(InputAction::Reset);
                 }
-                Event::KeyDown { keycode: Some(Keycode::Space), .. } => {
+                Event::KeyDown {
+                    keycode: Some(Keycode::Space),
+                    ..
+                } => {
                     return Some(InputAction::Pause);
                 }
-                Event::KeyDown { keycode: Some(Keycode::LeftBracket), .. } => {
+                Event::KeyDown {
+                    keycode: Some(Keycode::LeftBracket),
+                    ..
+                } => {
                     return Some(InputAction::DecreaseTick);
                 }
-                Event::KeyDown { keycode: Some(Keycode::RightBracket), .. } => {
+                Event::KeyDown {
+                    keycode: Some(Keycode::RightBracket),
+                    ..
+                } => {
                     return Some(InputAction::IncreaseTick);
                 }
-                Event::KeyDown { keycode: Some(Keycode::Tab), .. } => {
+                Event::KeyDown {
+                    keycode: Some(Keycode::Tab),
+                    ..
+                } => {
                     return Some(InputAction::DebugInfo);
                 }
-                Event::KeyUp { keycode: Some(Keycode::Tab), .. } => {
+                Event::KeyUp {
+                    keycode: Some(Keycode::Tab),
+                    ..
+                } => {
                     return Some(InputAction::DebugInfo);
                 }
                 _ => {}
@@ -90,7 +117,7 @@ pub enum InputAction {
     Pause,
     DecreaseTick,
     IncreaseTick,
-    DebugInfo
+    DebugInfo,
 }
 
 pub fn key_map(keycode: Keycode) -> Option<u8> {
@@ -114,6 +141,6 @@ pub fn key_map(keycode: Keycode) -> Option<u8> {
         Keycode::X => Some(0x0),
         Keycode::C => Some(0xB),
         Keycode::V => Some(0xF),
-        _ => None
+        _ => None,
     };
 }

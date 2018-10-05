@@ -12,4 +12,4 @@ categories = ["emulators", "games"]
 [dependencies]
 rand = "^0.3"
 clap = "^2.26.1"
-sdl2 = "0.30.0"
+sdl2 = "0.31.0"

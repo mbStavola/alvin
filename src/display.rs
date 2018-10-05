@@ -1,23 +1,36 @@
 use sdl2;
-use sdl2::rect::Point;
 use sdl2::pixels::Color;
-use sdl2::video::Window;
+use sdl2::rect::Point;
 use sdl2::render::Canvas;
+use sdl2::video::Window;
 
-const BG_COLOR: Color = Color { r: 53, g: 59, b: 115, a: 0xFF };
-const FG_COLOR: Color = Color { r: 255, g: 255, b: 41, a: 0xFF };
+const BG_COLOR: Color = Color {
+    r: 53,
+    g: 59,
+    b: 115,
+    a: 0xFF,
+};
+const FG_COLOR: Color = Color {
+    r: 255,
+    g: 255,
+    b: 41,
+    a: 0xFF,
+};
 
 pub struct Display {
     working_screen: [[bool; 32]; 64],
-    canvas: Canvas<Window>
+    canvas: Canvas<Window>,
 }
 
 impl Display {
     pub fn new(sdl_context: &sdl2::Sdl) -> Display {
         let video_subsystem = sdl_context.video().unwrap();
 
-        let window = video_subsystem.window("Alvin", 640, 320)
-            .position_centered().build().unwrap();
+        let window = video_subsystem
+            .window("Alvin", 640, 320)
+            .position_centered()
+            .build()
+            .unwrap();
 
         let mut canvas = window.into_canvas().accelerated().build().unwrap();
         canvas.set_scale(10.0, 10.0);
@@ -26,7 +39,7 @@ impl Display {
 
         Display {
             working_screen: [[false; 32]; 64],
-            canvas
+            canvas,
         }
     }
 
