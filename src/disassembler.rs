@@ -1,4 +1,4 @@
-use opcode::Opcode;
+use crate::opcode::Opcode;
 
 pub fn disassemble(buffer: &[u8]) {
     println!("HEX\tOP\tARG1\tARG2\tARG3");

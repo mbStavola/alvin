@@ -1,17 +1,20 @@
+use std::{
+    collections::VecDeque,
+    thread,
+    time::Duration,
+};
+
 use rand;
+use rand::distributions::{IndependentSample, Range};
 use sdl2;
 
-use rand::distributions::{IndependentSample, Range};
-
-use std::thread;
-use std::time::Instant;
-use std::collections::VecDeque;
-
-use sound::Sound;
-use opcode::Opcode;
-use display::Display;
-use input::{Input, InputAction};
-use memory::{load_fonts, load_program};
+use crate::{
+    display::Display,
+    input::{Input, InputAction},
+    memory::{load_fonts, load_program},
+    opcode::Opcode,
+    sound::Sound,
+};
 
 pub type Address = u16;
 pub type Constant = u8;
@@ -64,7 +67,7 @@ impl System {
     }
 
     pub fn run(&mut self, dump_state: bool) -> Result<(), ()> {
-        let mut tick_rate = 16;
+        let mut tick_rate: Duration = Duration::from_millis(16);
         let mut running = true;
         let mut paused = false;
 
@@ -85,14 +88,14 @@ impl System {
                 }
                 Some(InputAction::Pause) => paused = !paused,
                 Some(InputAction::DecreaseTick) => {
-                    if tick_rate >= 8 {
-                        tick_rate -= 4;
+                    if tick_rate.as_millis() >= 8 {
+                        tick_rate -= Duration::from_millis(4);
                     } else {
-                        tick_rate = 4;
+                        tick_rate = Duration::from_millis(4);
                     }
                 }
                 Some(InputAction::IncreaseTick) => {
-                    tick_rate += 4;
+                    tick_rate += Duration::from_millis(4);
                 }
                 Some(InputAction::DebugInfo) => {
                     if !dump_state {
@@ -194,7 +197,7 @@ impl System {
             Opcode::AddAssign(register, constant) => {
                 let value = self.get_register(register);
 
-                let mut result = if let Some(result) = value.checked_add(constant) {
+                let result = if let Some(result) = value.checked_add(constant) {
                     result
                 } else {
                     (value as u16 + constant as u16) as u8
@@ -230,7 +233,7 @@ impl System {
                 let first_value = self.get_register(first);
                 let second_value = self.get_register(second);
 
-                let mut result = if let Some(result) = first_value.checked_add(second_value) {
+                let result = if let Some(result) = first_value.checked_add(second_value) {
                     self.set_flag_register(0x0);
                     result
                 } else {
@@ -454,7 +457,7 @@ impl System {
         Ok(())
     }
 
-    fn tick(&mut self, tick_rate: u32) {
+    fn tick(&mut self, tick_rate: Duration) {
         let mut active_delay = self.delay_timer > 0;
         let mut active_sound = self.sound_timer > 0;
 
@@ -479,7 +482,7 @@ impl System {
             }
         }
 
-        thread::sleep_ms(tick_rate);
+        thread::sleep(tick_rate);
     }
 
     fn get_register(&self, register: Register) -> Constant {

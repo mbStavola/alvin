@@ -1,15 +1,17 @@
-use sdl2;
-use sdl2::rect::Point;
-use sdl2::pixels::Color;
-use sdl2::video::Window;
-use sdl2::render::Canvas;
+use sdl2::{
+    self,
+    pixels::Color,
+    rect::Point,
+    render::Canvas,
+    video::Window,
+};
 
 const BG_COLOR: Color = Color { r: 53, g: 59, b: 115, a: 0xFF };
 const FG_COLOR: Color = Color { r: 255, g: 255, b: 41, a: 0xFF };
 
 pub struct Display {
     working_screen: [[bool; 32]; 64],
-    canvas: Canvas<Window>
+    canvas: Canvas<Window>,
 }
 
 impl Display {
@@ -26,7 +28,7 @@ impl Display {
 
         Display {
             working_screen: [[false; 32]; 64],
-            canvas
+            canvas,
         }
     }
 

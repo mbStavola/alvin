@@ -1,7 +1,9 @@
-use sdl2;
-use sdl2::EventPump;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
+use sdl2::{
+    self,
+    event::Event,
+    EventPump,
+    keyboard::Keycode,
+};
 
 pub struct Input {
     event_pump: EventPump
@@ -90,7 +92,7 @@ pub enum InputAction {
     Pause,
     DecreaseTick,
     IncreaseTick,
-    DebugInfo
+    DebugInfo,
 }
 
 pub fn key_map(keycode: Keycode) -> Option<u8> {

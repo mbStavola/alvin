@@ -1,6 +1,6 @@
 use std::fmt;
 
-use emulator::{Address, Constant, Register};
+use crate::emulator::{Address, Constant, Register};
 
 pub enum Opcode {
     Call(Address),
@@ -52,44 +52,46 @@ impl Opcode {
             second_byte & 0xF
         );
 
-        match nibbles {
-            (0x0, _, 0xE, 0x0) => Ok(Opcode::Clear),
-            (0x0, _, 0xE, 0xE) => Ok(Opcode::Return),
-            (0x0, _, _, _) => Ok(Opcode::Call(build_address(nibbles))),
-            (0x1, _, _, _) => Ok(Opcode::Goto(build_address(nibbles))),
-            (0x2, _, _, _) => Ok(Opcode::CallFunction(build_address(nibbles))),
-            (0x3, _, _, _) => Ok(Opcode::SkipEq(nibbles.1, build_constant(nibbles))),
-            (0x4, _, _, _) => Ok(Opcode::SkipNEq(nibbles.1, build_constant(nibbles))),
-            (0x5, _, _, 0x0) => Ok(Opcode::SkipEqReg(nibbles.1, nibbles.2)),
-            (0x6, _, _, _) => Ok(Opcode::Set(nibbles.1, build_constant(nibbles))),
-            (0x7, _, _, _) => Ok(Opcode::AddAssign(nibbles.1, build_constant(nibbles))),
-            (0x8, _, _, 0x0) => Ok(Opcode::Copy(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0x1) => Ok(Opcode::Or(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0x2) => Ok(Opcode::And(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0x3) => Ok(Opcode::Xor(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0x4) => Ok(Opcode::AddAssignReg(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0x5) => Ok(Opcode::SubAssignReg(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0x6) => Ok(Opcode::ShiftRight(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0x7) => Ok(Opcode::Subtract(nibbles.1, nibbles.2)),
-            (0x8, _, _, 0xE) => Ok(Opcode::ShiftLeft(nibbles.1, nibbles.2)),
-            (0x9, _, _, 0x0) => Ok(Opcode::SkipNEqReg(nibbles.1, nibbles.2)),
-            (0xA, _, _, _) => Ok(Opcode::SetAddressReg(build_address(nibbles))),
-            (0xB, _, _, _) => Ok(Opcode::JumpOffset(build_address(nibbles))),
-            (0xC, _, _, _) => Ok(Opcode::SetRand(nibbles.1, build_constant(nibbles))),
-            (0xD, _, _, _) => Ok(Opcode::Draw(nibbles.1, nibbles.2, nibbles.3)),
-            (0xE, _, 0x9, 0xE) => Ok(Opcode::SkipKeyPress(nibbles.1)),
-            (0xE, _, 0xA, 0x1) => Ok(Opcode::SkipNoKeyPress(nibbles.1)),
-            (0xF, _, 0x0, 0x7) => Ok(Opcode::StoreDelayTimer(nibbles.1)),
-            (0xF, _, 0x0, 0xA) => Ok(Opcode::StoreKeypress(nibbles.1)),
-            (0xF, _, 0x1, 0x5) => Ok(Opcode::SetDelayTimer(nibbles.1)),
-            (0xF, _, 0x1, 0x8) => Ok(Opcode::SetSoundTimer(nibbles.1)),
-            (0xF, _, 0x1, 0xE) => Ok(Opcode::IncrementAddressReg(nibbles.1)),
-            (0xF, _, 0x2, 0x9) => Ok(Opcode::StoreSpriteAddress(nibbles.1)),
-            (0xF, _, 0x3, 0x3) => Ok(Opcode::BinaryCodedDecimal(nibbles.1)),
-            (0xF, _, 0x5, 0x5) => Ok(Opcode::Dump(nibbles.1)),
-            (0xF, _, 0x6, 0x5) => Ok(Opcode::Load(nibbles.1)),
-            _ => Err(build_data(nibbles))
-        }
+        let opcode = match nibbles {
+            (0x0, _, 0xE, 0x0) => Opcode::Clear,
+            (0x0, _, 0xE, 0xE) => Opcode::Return,
+            (0x0, _, _, _) => Opcode::Call(build_address(nibbles)),
+            (0x1, _, _, _) => Opcode::Goto(build_address(nibbles)),
+            (0x2, _, _, _) => Opcode::CallFunction(build_address(nibbles)),
+            (0x3, _, _, _) => Opcode::SkipEq(nibbles.1, build_constant(nibbles)),
+            (0x4, _, _, _) => Opcode::SkipNEq(nibbles.1, build_constant(nibbles)),
+            (0x5, _, _, 0x0) => Opcode::SkipEqReg(nibbles.1, nibbles.2),
+            (0x6, _, _, _) => Opcode::Set(nibbles.1, build_constant(nibbles)),
+            (0x7, _, _, _) => Opcode::AddAssign(nibbles.1, build_constant(nibbles)),
+            (0x8, _, _, 0x0) => Opcode::Copy(nibbles.1, nibbles.2),
+            (0x8, _, _, 0x1) => Opcode::Or(nibbles.1, nibbles.2),
+            (0x8, _, _, 0x2) => Opcode::And(nibbles.1, nibbles.2),
+            (0x8, _, _, 0x3) => Opcode::Xor(nibbles.1, nibbles.2),
+            (0x8, _, _, 0x4) => Opcode::AddAssignReg(nibbles.1, nibbles.2),
+            (0x8, _, _, 0x5) => Opcode::SubAssignReg(nibbles.1, nibbles.2),
+            (0x8, _, _, 0x6) => Opcode::ShiftRight(nibbles.1, nibbles.2),
+            (0x8, _, _, 0x7) => Opcode::Subtract(nibbles.1, nibbles.2),
+            (0x8, _, _, 0xE) => Opcode::ShiftLeft(nibbles.1, nibbles.2),
+            (0x9, _, _, 0x0) => Opcode::SkipNEqReg(nibbles.1, nibbles.2),
+            (0xA, _, _, _) => Opcode::SetAddressReg(build_address(nibbles)),
+            (0xB, _, _, _) => Opcode::JumpOffset(build_address(nibbles)),
+            (0xC, _, _, _) => Opcode::SetRand(nibbles.1, build_constant(nibbles)),
+            (0xD, _, _, _) => Opcode::Draw(nibbles.1, nibbles.2, nibbles.3),
+            (0xE, _, 0x9, 0xE) => Opcode::SkipKeyPress(nibbles.1),
+            (0xE, _, 0xA, 0x1) => Opcode::SkipNoKeyPress(nibbles.1),
+            (0xF, _, 0x0, 0x7) => Opcode::StoreDelayTimer(nibbles.1),
+            (0xF, _, 0x0, 0xA) => Opcode::StoreKeypress(nibbles.1),
+            (0xF, _, 0x1, 0x5) => Opcode::SetDelayTimer(nibbles.1),
+            (0xF, _, 0x1, 0x8) => Opcode::SetSoundTimer(nibbles.1),
+            (0xF, _, 0x1, 0xE) => Opcode::IncrementAddressReg(nibbles.1),
+            (0xF, _, 0x2, 0x9) => Opcode::StoreSpriteAddress(nibbles.1),
+            (0xF, _, 0x3, 0x3) => Opcode::BinaryCodedDecimal(nibbles.1),
+            (0xF, _, 0x5, 0x5) => Opcode::Dump(nibbles.1),
+            (0xF, _, 0x6, 0x5) => Opcode::Load(nibbles.1),
+            _ => return Err(build_data(nibbles))
+        };
+
+        Ok(opcode)
     }
 }
 

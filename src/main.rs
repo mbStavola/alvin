@@ -1,8 +1,19 @@
-#[macro_use]
-extern crate clap;
+#![feature(duration_as_u128)]
 
-extern crate rand;
-extern crate sdl2;
+use std::{
+    fs::File,
+    io::{
+        BufRead,
+        BufReader,
+    },
+};
+
+use clap::{App, Arg, crate_version};
+
+use crate::{
+    disassembler::disassemble,
+    emulator::System,
+};
 
 mod input;
 mod sound;
@@ -11,15 +22,6 @@ mod memory;
 mod display;
 mod emulator;
 mod disassembler;
-
-use clap::{App, Arg};
-
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
-
-use disassembler::disassemble;
-use emulator::System;
 
 fn main() {
     let matches = App::new("alvin")
